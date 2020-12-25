@@ -1,4 +1,4 @@
-name: ci-project
+name: Backend CI
 
 on:
   pull_request:
@@ -7,20 +7,23 @@ on:
       - synchronize
       - reopened
 
+defaults:
+  run:
+    shell: bash
+    working-directory: backend/
+
 jobs:
   ci:
-    name: Lint and test project
+    name: Lint, build and test backend
     runs-on: ${{ matrix.os }}
 
     strategy:
       matrix:
         os:
           - ubuntu-latest
-          - macos-latest
           - windows-latest
         python-version:
-          - 3.6
-          - 3.9
+          - 3.8
 
     steps:
       - name: Check out repository
@@ -37,11 +40,17 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Lint project
+      - name: Lint backend
         run: black . --check
 
-      - name: Test project
-        run: coverage run -m pytest
+      - name: Check for missing migrations
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Run database migrations
+        run: python manage.py migrate
+
+      - name: Run Django tests
+        run: coverage run manage.py test
 
       - name: Print test coverage report
         run: coverage report -m
